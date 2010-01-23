@@ -2,9 +2,10 @@
 #
 # License: GPLv2+
 # Authors: Luke Macken <lewk@csh.rit.edu>
-#	   Jordal Sissel <jls@csh.rit.edu>
+#          Jordal Sissel <jls@csh.rit.edu>
 
 import os
+import Xlib
 
 from signal import SIGSTOP, SIGCONT
 from Xlib import X, display, Xatom
@@ -34,7 +35,10 @@ def watch(properties):
                 window = dpy.create_resource_object('window', id)
                 if window.id == 0: continue
                 pid = int(window.get_full_property(wm_pid, 0).value.tolist()[0])
-                title = window.get_full_property(Xatom.WM_NAME, 0).value
+                try:
+                    title = window.get_full_property(Xatom.WM_NAME, 0).value
+                except Xlib.error.BadWindow:
+                    continue
                 yield atoms[ev.atom], title, pid, data
 
 def tamefox():
@@ -42,7 +46,7 @@ def tamefox():
     alive = True
     ff_pid = None
     for property, title, pid, event in watch(['_NET_ACTIVE_WINDOW']):
-        if title.endswith('Firefox') or title.endswith('Vimperator'):
+        if 'Mozilla Firefox' in title or title.endswith('Vimperator'):
             ff_pid = pid
             if not alive:
                 print 'Waking up firefox'
@@ -54,7 +58,7 @@ def tamefox():
                               'Downloads', 'Save As', 'Save a Bookmark',
                               'Add Security Exception', 'Print',
                               'File Upload', 'Clear Private Data',
-                              'Delicious') \
+                              'Delicious', 'Delicious account') \
                 and not title.startswith('The page at') and \
                 not title.startswith('Warning'):
             print 'Putting firefox to sleep'
