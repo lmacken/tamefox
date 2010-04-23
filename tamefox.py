@@ -1,8 +1,6 @@
-# tamefox.py -- Puts firefox to sleep when it does not have focus.
-#
+# tamefox.py - Put firefox to sleep when it does not have focus.
 # License: GPLv2+
-# Authors: Luke Macken <lewk@csh.rit.edu>
-#          Jordal Sissel <jls@csh.rit.edu>
+# Author: Luke Macken <lmacken@redhat.com>
 
 import os
 import Xlib
@@ -10,12 +8,17 @@ import Xlib
 from signal import SIGSTOP, SIGCONT
 from Xlib import X, display, Xatom
 
+VERSION = '1.0'
+TAME = ['Firefox'] # Windows that we wish to tame
+
+dpy = display.Display()
+
 def watch(properties):
     """ A generator that yields events for a list of X properties """
-    dpy = display.Display()
     screens = dpy.screen_count()
     atoms = {}
     wm_pid = dpy.get_atom('_NET_WM_PID')
+    wm_client_leader = dpy.get_atom('WM_CLIENT_LEADER')
 
     for property in properties:
         atomid = dpy.get_atom(property, only_if_exists=True)
@@ -34,36 +37,40 @@ def watch(properties):
                 id = int(data.value.tolist()[0])
                 window = dpy.create_resource_object('window', id)
                 if window.id == 0: continue
-                pid = int(window.get_full_property(wm_pid, 0).value.tolist()[0])
+                parent = None
                 try:
+                    parent = window.get_full_property(wm_client_leader, 0).value.tolist()[0]
+                    parent = dpy.create_resource_object('window', parent)
+                    parent = parent.get_full_property(Xatom.WM_NAME, 0).value
+                except Exception, e:
+                    print str(e)
+                try:
+                    pid = int(window.get_full_property(wm_pid, 0).value.tolist()[0])
                     title = window.get_full_property(Xatom.WM_NAME, 0).value
-                except Xlib.error.BadWindow:
+                except (Xlib.error.BadWindow, Xlib.error.BadValue, AttributeError), e:
+                    print str(e)
                     continue
-                yield atoms[ev.atom], title, pid, data
+                yield atoms[ev.atom], title, pid, data, parent
 
 def tamefox():
     """ Puts firefox to sleep when it loses focus """
     alive = True
     ff_pid = None
-    for property, title, pid, event in watch(['_NET_ACTIVE_WINDOW']):
-        if 'Mozilla Firefox' in title or title.endswith('Vimperator'):
+    for property, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
+        if parent in TAME:
             ff_pid = pid
             if not alive:
                 print 'Waking up firefox'
                 os.kill(ff_pid, SIGCONT)
                 alive = True
-        elif ff_pid and alive and not title.startswith('Opening') and \
-                not title.startswith('PasswordMaker') and \
-                title not in ('Authentication Required', 'Confirm', 'Alert',
-                              'Downloads', 'Save As', 'Save a Bookmark',
-                              'Add Security Exception', 'Print',
-                              'File Upload', 'Clear Private Data',
-                              'Delicious', 'Delicious account') \
-                and not title.startswith('The page at') and \
-                not title.startswith('Warning'):
+        elif ff_pid and alive:
             print 'Putting firefox to sleep'
+            dpy.grab_server()
+            dpy.sync()
             os.kill(ff_pid, SIGSTOP)
+            dpy.ungrab_server()
             alive = False
 
 if __name__ == '__main__':
+    print "Tamefox v%s running..." % VERSION
     tamefox()
