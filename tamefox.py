@@ -1,6 +1,7 @@
 # tamefox.py - Put firefox to sleep when it does not have focus.
 # License: GPLv2+
 # Author: Luke Macken <lmacken@redhat.com>
+# Thanks to Jordan Sissel and Adam Jackson for their help
 
 import os
 import Xlib
