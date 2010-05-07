@@ -53,6 +53,13 @@ def watch(properties):
                     continue
                 yield atoms[ev.atom], title, pid, data, parent
 
+def wait_for_stop(pid):
+    while True:
+        statline = open("/proc/%d/stat" % pid)
+        if statline.read().split()[2] == 'T':
+            break
+        statline.close()
+
 def tamefox():
     """ Puts firefox to sleep when it loses focus """
     alive = True
@@ -69,6 +76,7 @@ def tamefox():
             dpy.grab_server()
             dpy.sync()
             os.kill(ff_pid, SIGSTOP)
+            wait_for_stop(ff_pid)
             dpy.ungrab_server()
             alive = False
 
