@@ -54,19 +54,22 @@ def watch(properties):
                 data = ev.window.get_full_property(ev.atom, 0)
                 id = int(data.value.tolist()[0])
                 window = dpy.create_resource_object('window', id)
-                if window.id == 0: continue
+                if window.id == 0:
+                    continue
                 parent = None
                 try:
-                    parent = window.get_full_property(wm_client_leader, 0).value.tolist()[0]
+                    parent = window.get_full_property(wm_client_leader, 0)
+                    parent = parent.value.tolist()[0]
                     parent = dpy.create_resource_object('window', parent)
                     parent = parent.get_full_property(Xatom.WM_NAME, 0).value
                 except Exception, e:
-                    print str(e)
+                    print(str(e))
                 try:
-                    pid = int(window.get_full_property(wm_pid, 0).value.tolist()[0])
+                    pid = window.get_full_property(wm_pid, 0)
+                    pid = int(pid.value.tolist()[0])
                     title = window.get_full_property(Xatom.WM_NAME, 0).value
                 except Exception, e:
-                    print str(e)
+                    print(str(e))
                     continue
                 yield atoms[ev.atom], title, pid, data, parent
 
