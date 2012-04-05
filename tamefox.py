@@ -9,8 +9,8 @@ import psutil
 from signal import SIGSTOP, SIGCONT
 from Xlib import X, display, Xatom
 
-VERSION = '1.0'
-TAME = ['Firefox', 'Chromium'] # Windows that we wish to tame
+VERSION = '1.1'
+TAME = ['Firefox', 'Chromium']  # Windows that we wish to tame
 
 dpy = display.Display()
 
