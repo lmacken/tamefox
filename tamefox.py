@@ -63,6 +63,12 @@ def wait_for_stop(process):
             break
 
 
+def send_signal(process, signal):
+    process.send_signal(signal)
+    for child in process.get_children():
+        child.send_signal(signal)
+
+
 def tamefox():
     """ Puts firefox to sleep when it loses focus """
     alive = True
@@ -72,30 +78,18 @@ def tamefox():
             if parent in TAME:
                 process = psutil.Process(pid)
                 if not alive:
-                    print('Waking up %s' % process.name)
-                    process.send_signal(SIGCONT)
-                    for child in process.get_children():
-                        print('Waking up %s' % child.name)
-                        child.send_signal(SIGCONT)
+                    send_signal(process, SIGCONT)
                     alive = True
             elif process and alive:
                 dpy.grab_server()
                 dpy.sync()
-                print('Putting %s to sleep' % process.name)
-                process.send_signal(SIGSTOP)
-                for child in process.get_children():
-                    print('Putting %s to sleep' % child.name)
-                    child.send_signal(SIGSTOP)
+                send_signal(process, SIGSTOP)
                 wait_for_stop(process)
                 dpy.ungrab_server()
                 alive = False
     finally:
         if process and not alive:
-            print('Waking up %s' % process.name)
-            process.send_signal(SIGCONT)
-            for child in process.get_children():
-                print('Waking up %s' % child.name)
-                child.send_signal(SIGCONT)
+            send_signal(process, SIGCONT)
 
 
 if __name__ == '__main__':
