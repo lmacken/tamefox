@@ -70,33 +70,49 @@ def send_signal(process, signal):
         child.send_signal(signal)
 
 
+def stop(process):
+    dpy.grab_server()
+    dpy.sync()
+    send_signal(process, SIGSTOP)
+    wait_for_stop(process)
+    dpy.ungrab_server()
+
+
+def cont(process):
+    send_signal(process, SIGCONT)
+
+
 def tamefox():
     """ Puts firefox to sleep when it loses focus """
-    alive = True
     processes = {}
+    alive = []
     try:
         for property, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
-            if parent in TAME:
-                if pid not in processes:
-                    processes[pid] = psutil.Process(pid)
-                if not alive:
-                    for process in processes.values():
-                        send_signal(process, SIGCONT)
-                    alive = True
-            elif processes and alive:
-                dpy.grab_server()
-                dpy.sync()
-                for process in processes.values():
-                    send_signal(process, SIGSTOP)
-                    wait_for_stop(process)
-                dpy.ungrab_server()
-                alive = False
+            if parent in TAME and pid not in processes:
+                processes[pid] = psutil.Process(pid)
+                alive.append(pid)
+            if pid in processes:
+                if pid not in alive:
+                    cont(processes[pid])
+                    alive.append(pid)
+                others = [p for p in alive if p != pid]
+                for other in others:
+                    stop(processes[other])
+                    alive.remove(other)
+            else:
+                for running in alive:
+                    stop(processes[running])
+                    alive.remove(running)
     finally:
-        if processes and not alive:
+        if processes:
             for process in processes.values():
-                send_signal(process, SIGCONT)
+                if process.status == psutil.STATUS_STOPPED:
+                    send_signal(process, SIGCONT)
 
 
 if __name__ == '__main__':
     print "Tamefox v%s running..." % VERSION
-    tamefox()
+    try:
+        tamefox()
+    except KeyboardInterrupt:
+        pass
