@@ -102,7 +102,7 @@ def tamefox():
             else:
                 for running in alive:
                     stop(processes[running])
-                    alive.remove(running)
+                alive = []
     finally:
         if processes:
             for process in processes.values():
