@@ -89,9 +89,11 @@ def send_signal(process, signal):
 def stop(process):
     dpy.grab_server()
     dpy.sync()
-    send_signal(process, SIGSTOP)
-    wait_for_stop(process)
-    dpy.ungrab_server()
+    try:
+        send_signal(process, SIGSTOP)
+        wait_for_stop(process)
+    finally:
+        dpy.ungrab_server()
 
 
 def cont(process):
