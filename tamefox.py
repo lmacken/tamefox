@@ -111,21 +111,33 @@ def tamefox():
                 alive.append(pid)
             if pid in processes:
                 if pid not in alive:
-                    cont(processes[pid])
-                    alive.append(pid)
+                    try:
+                        cont(processes[pid])
+                        alive.append(pid)
+                    except psutil.error.NoSuchProcess:
+                        del(processes[pid])
                 others = [p for p in alive if p != pid]
                 for other in others:
-                    stop(processes[other])
+                    try:
+                        stop(processes[other])
+                    except psutil.error.NoSuchProcess:
+                        del(processes[other])
                     alive.remove(other)
             else:
                 for running in alive:
-                    stop(processes[running])
+                    try:
+                        stop(processes[running])
+                    except psutil.error.NoSuchProcess:
+                        del(processes[running])
                 alive = []
     finally:
         if processes:
             for process in processes.values():
-                if process.status == psutil.STATUS_STOPPED:
-                    cont(process)
+                try:
+                    if process.status == psutil.STATUS_STOPPED:
+                        cont(process)
+                except psutil.error.NoSuchProcess:
+                    pass
 
 
 if __name__ == '__main__':
