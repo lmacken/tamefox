@@ -4,8 +4,6 @@
 # Author: Luke Macken <lmacken@redhat.com>
 # Thanks to Jordan Sissel and Adam Jackson for their help
 
-import os
-import Xlib
 import psutil
 
 from signal import SIGSTOP, SIGCONT
@@ -51,7 +49,7 @@ def watch(properties):
                 try:
                     pid = int(window.get_full_property(wm_pid, 0).value.tolist()[0])
                     title = window.get_full_property(Xatom.WM_NAME, 0).value
-                except (Xlib.error.BadWindow, Xlib.error.BadValue, AttributeError), e:
+                except Exception, e:
                     print str(e)
                     continue
                 yield atoms[ev.atom], title, pid, data, parent
