@@ -115,7 +115,6 @@ def tame():
             if pid not in awake:
                 awake.append(pid)
         except psutil.error.NoSuchProcess:
-            print("Dead process, can't continue: %s" % process)
             del(processes[pid])
             if pid in awake:
                 awake.remove(pid)
