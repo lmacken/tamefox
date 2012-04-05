@@ -101,7 +101,6 @@ def tame():
             wait_for_stop(process)
             awake.remove(process.pid)
         except psutil.error.NoSuchProcess:
-            print("Dead process, can't stop: %s " % process)
             awake.remove(process.pid)
             del(processes[process.pid])
         finally:
