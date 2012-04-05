@@ -9,7 +9,7 @@ import psutil
 from signal import SIGSTOP, SIGCONT
 from Xlib import X, display, Xatom
 
-VERSION = '1.1'
+VERSION = '1.2'
 TAME = ['Firefox', 'Chromium']  # Windows that we wish to tame
 
 dpy = display.Display()
@@ -73,24 +73,28 @@ def send_signal(process, signal):
 def tamefox():
     """ Puts firefox to sleep when it loses focus """
     alive = True
-    process = None
+    processes = {}
     try:
         for property, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
             if parent in TAME:
-                process = psutil.Process(pid)
+                if pid not in processes:
+                    processes[pid] = psutil.Process(pid)
                 if not alive:
-                    send_signal(process, SIGCONT)
+                    for process in processes.values():
+                        send_signal(process, SIGCONT)
                     alive = True
-            elif process and alive:
+            elif processes and alive:
                 dpy.grab_server()
                 dpy.sync()
-                send_signal(process, SIGSTOP)
-                wait_for_stop(process)
+                for process in processes.values():
+                    send_signal(process, SIGSTOP)
+                    wait_for_stop(process)
                 dpy.ungrab_server()
                 alive = False
     finally:
-        if process and not alive:
-            send_signal(process, SIGCONT)
+        if processes and not alive:
+            for process in processes.values():
+                send_signal(process, SIGCONT)
 
 
 if __name__ == '__main__':
