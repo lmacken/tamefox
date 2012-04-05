@@ -89,63 +89,64 @@ def send_signal(process, signal):
         child.send_signal(signal)
 
 
-def stop(process):
-    dpy.grab_server()
-    dpy.sync()
-    try:
-        send_signal(process, SIGSTOP)
-        wait_for_stop(process)
-    finally:
-        dpy.ungrab_server()
-
-
-def cont(process):
-    send_signal(process, SIGCONT)
-
-
-def tamefox():
-    """ Puts firefox to sleep when it loses focus """
+def tame():
     processes = {}
-    alive = []
+    awake = []
+
+    def stop(process):
+        dpy.grab_server()
+        dpy.sync()
+        try:
+            send_signal(process, SIGSTOP)
+            wait_for_stop(process)
+            awake.remove(process.pid)
+        except psutil.error.NoSuchProcess:
+            print("Dead process, can't stop: %s " % process)
+            awake.remove(process.pid)
+            del(processes[process.pid])
+        finally:
+            dpy.ungrab_server()
+
+    def cont(process):
+        pid = process.pid
+        if pid in awake:
+            return
+        try:
+            send_signal(process, SIGCONT)
+            if pid not in awake:
+                awake.append(pid)
+        except psutil.error.NoSuchProcess:
+            print("Dead process, can't continue: %s" % process)
+            del(processes[pid])
+            if pid in awake:
+                awake.remove(pid)
+
     try:
-        for property, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
+        for prop, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
             if parent in TAME and pid not in processes:
-                processes[pid] = psutil.Process(pid)
-                alive.append(pid)
+                proc = psutil.Process(pid)
+                processes[pid] = proc
+                awake.append(pid)
             if pid in processes:
-                if pid not in alive:
-                    try:
-                        cont(processes[pid])
-                        alive.append(pid)
-                    except psutil.error.NoSuchProcess:
-                        del(processes[pid])
-                others = [p for p in alive if p != pid]
-                for other in others:
-                    try:
-                        stop(processes[other])
-                    except psutil.error.NoSuchProcess:
-                        del(processes[other])
-                    alive.remove(other)
+                for process in processes.values():
+                    cont(process)
+                for other in [p for p in awake if p != pid]:
+                    stop(processes[other])
             else:
-                for running in alive:
-                    try:
-                        stop(processes[running])
-                    except psutil.error.NoSuchProcess:
-                        del(processes[running])
-                alive = []
+                for running in [p for p in awake]:
+                    stop(processes[running])
     finally:
-        if processes:
-            for process in processes.values():
-                try:
-                    if process.status == psutil.STATUS_STOPPED:
-                        cont(process)
-                except psutil.error.NoSuchProcess:
-                    pass
+        for process in processes.values():
+            try:
+                if process.status == psutil.STATUS_STOPPED:
+                    cont(process)
+            except psutil.error.NoSuchProcess:
+                pass
 
 
 if __name__ == '__main__':
-    print "Tamefox v%s running..." % VERSION
+    print("Tamefox v%s running..." % VERSION)
     try:
-        tamefox()
+        tame()
     except KeyboardInterrupt:
         pass
