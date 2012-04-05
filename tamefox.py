@@ -1,10 +1,12 @@
 # tamefox.py - Put firefox to sleep when it does not have focus.
+# Requirements: python-xlib python-psutil
 # License: GPLv2+
 # Author: Luke Macken <lmacken@redhat.com>
 # Thanks to Jordan Sissel and Adam Jackson for their help
 
 import os
 import Xlib
+import psutil
 
 from signal import SIGSTOP, SIGCONT
 from Xlib import X, display, Xatom
@@ -13,6 +15,7 @@ VERSION = '1.0'
 TAME = ['Firefox'] # Windows that we wish to tame
 
 dpy = display.Display()
+
 
 def watch(properties):
     """ A generator that yields events for a list of X properties """
@@ -53,6 +56,7 @@ def watch(properties):
                     continue
                 yield atoms[ev.atom], title, pid, data, parent
 
+
 def wait_for_stop(pid):
     while True:
         statline = open("/proc/%d/stat" % pid)
@@ -60,29 +64,40 @@ def wait_for_stop(pid):
             break
         statline.close()
 
+
 def tamefox():
     """ Puts firefox to sleep when it loses focus """
     alive = True
-    ff_pid = None
+    process = None
     try:
         for property, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
             if parent in TAME:
-                ff_pid = pid
+                process = psutil.Process(pid)
                 if not alive:
-                    print 'Waking up firefox'
-                    os.kill(ff_pid, SIGCONT)
+                    print('Waking up %s' % process.name)
+                    process.send_signal(SIGCONT)
+                    for child in process.get_children():
+                        print('Waking up %s' % child.name)
+                        child.send_signal(SIGCONT)
                     alive = True
-            elif ff_pid and alive:
-                print 'Putting firefox to sleep'
+            elif process and alive:
                 dpy.grab_server()
                 dpy.sync()
-                os.kill(ff_pid, SIGSTOP)
-                wait_for_stop(ff_pid)
+                print('Putting %s to sleep' % process.name)
+                process.send_signal(SIGSTOP)
+                for child in process.get_children():
+                    print('Putting %s to sleep' % child.name)
+                    child.send_signal(SIGSTOP)
+                wait_for_stop(process.pid)
                 dpy.ungrab_server()
                 alive = False
     finally:
-        if not alive:
-            os.killpg(ff_pgid, SIGCONT)
+        if process and not alive:
+            print('Waking up %s' % process.name)
+            process.send_signal(SIGCONT)
+            for child in process.get_children():
+                print('Waking up %s' % child.name)
+                child.send_signal(SIGCONT)
 
 
 if __name__ == '__main__':
