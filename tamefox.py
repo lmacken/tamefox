@@ -57,12 +57,10 @@ def watch(properties):
                 yield atoms[ev.atom], title, pid, data, parent
 
 
-def wait_for_stop(pid):
+def wait_for_stop(process):
     while True:
-        statline = open("/proc/%d/stat" % pid)
-        if statline.read().split()[2] == 'T':
+        if process.status == psutil.STATUS_STOPPED:
             break
-        statline.close()
 
 
 def tamefox():
@@ -88,7 +86,7 @@ def tamefox():
                 for child in process.get_children():
                     print('Putting %s to sleep' % child.name)
                     child.send_signal(SIGSTOP)
-                wait_for_stop(process.pid)
+                wait_for_stop(process)
                 dpy.ungrab_server()
                 alive = False
     finally:
