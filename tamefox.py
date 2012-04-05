@@ -64,30 +64,26 @@ def tamefox():
     """ Puts firefox to sleep when it loses focus """
     alive = True
     ff_pid = None
-    ff_pgid = None
     try:
         for property, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
-            pgid = os.getpgid(pid)
             if parent in TAME:
                 ff_pid = pid
-                ff_pgid = pgid
                 if not alive:
-                    os.killpg(pgid, SIGCONT)
-                    alive = True
-            elif ff_pgid and ff_pgid == pgid:
-                if not alive:
-                    os.killpg(ff_pgid, SIGCONT)
+                    print 'Waking up firefox'
+                    os.kill(ff_pid, SIGCONT)
                     alive = True
             elif ff_pid and alive:
+                print 'Putting firefox to sleep'
                 dpy.grab_server()
                 dpy.sync()
-                os.killpg(ff_pgid, SIGSTOP)
+                os.kill(ff_pid, SIGSTOP)
                 wait_for_stop(ff_pid)
                 dpy.ungrab_server()
                 alive = False
     finally:
         if not alive:
             os.killpg(ff_pgid, SIGCONT)
+
 
 if __name__ == '__main__':
     print "Tamefox v%s running..." % VERSION
