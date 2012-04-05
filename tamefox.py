@@ -62,8 +62,11 @@ def wait_for_stop(process):
 
 
 def send_signal(process, signal):
+    action = signal is SIGSTOP and 'Stopping' or 'Continuing'
+    print('%s %s' % (action, process.name))
     process.send_signal(signal)
     for child in process.get_children():
+        print('%s %s' % (action, child.name))
         child.send_signal(signal)
 
 
