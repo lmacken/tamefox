@@ -12,7 +12,7 @@ from signal import SIGSTOP, SIGCONT
 from Xlib import X, display, Xatom
 
 VERSION = '1.0'
-TAME = ['Firefox'] # Windows that we wish to tame
+TAME = ['Firefox', 'Chromium'] # Windows that we wish to tame
 
 dpy = display.Display()
 
