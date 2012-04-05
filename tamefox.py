@@ -107,7 +107,7 @@ def tamefox():
         if processes:
             for process in processes.values():
                 if process.status == psutil.STATUS_STOPPED:
-                    send_signal(process, SIGCONT)
+                    cont(process)
 
 
 if __name__ == '__main__':
