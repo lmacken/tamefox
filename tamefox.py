@@ -121,11 +121,11 @@ def tame():
 
     try:
         for prop, title, pid, event, parent in watch(['_NET_ACTIVE_WINDOW']):
+            try:
+                proc = psutil.Process(pid)
+            except psutil.error.NoSuchProcess:
+                continue
             if parent in TAME and pid not in processes:
-                try:
-                    proc = psutil.Process(pid)
-                except psutil.error.NoSuchProcess:
-                    continue
                 processes[pid] = proc
                 awake.append(pid)
             if pid in processes:
@@ -133,6 +133,9 @@ def tame():
                     cont(process)
                 for other in [p for p in awake if p != pid]:
                     stop(processes[other])
+            elif proc.ppid in processes:
+                if proc.ppid not in awake:
+                    cont(proc.parent)
             else:
                 for running in [p for p in awake]:
                     stop(processes[running])
