@@ -20,6 +20,7 @@
 #
 # Copyright (C) 2008-2013  Luke Macken <lmacken@redhat.com>
 
+import time
 import psutil
 
 from signal import SIGSTOP, SIGCONT
@@ -94,6 +95,7 @@ def tame():
     awake = []
 
     def stop(process):
+        time.sleep(1.0)  # Let wm animations finish
         dpy.grab_server()
         dpy.sync()
         try:
