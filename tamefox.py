@@ -22,6 +22,7 @@
 
 import time
 import psutil
+import psutil.error
 
 from signal import SIGSTOP, SIGCONT
 from Xlib import X, display, Xatom
